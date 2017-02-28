@@ -26,7 +26,7 @@ class HarvestMigrationDCATAP extends HarvestMigration {
     $this->itemUrl = drupal_realpath($this->dkanHarvestSource->getCacheDir()) .
             '/:id';
 
-    $this->source = new MigrateSourceList(
+    $this->source = new HarvestMigrateSourceList(
             new HarvestList($this->dkanHarvestSource->getCacheDir()),
             new MigrateItemJSON($this->itemUrl),
             $this->getCkanDatasetFields(),
