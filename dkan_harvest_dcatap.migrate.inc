@@ -47,9 +47,9 @@ class HarvestMigrationDCATAP extends HarvestMigration {
     $this->addFieldMapping('changed', 'modified');
     $this->addFieldMapping('created', 'issued');
     $this->addFieldMapping('field_public_access_level', 'accessLevel');
-    $this->addFieldMapping('field_contact_name', 'contactPointName');
     
     // Calculated field
+    $this->addFieldMapping('field_contact_name', '_mbox_name');
     $this->addFieldMapping('field_contact_email', '_mbox');
     
     $this->addFieldMapping('uuid', 'identifier');
@@ -68,8 +68,11 @@ class HarvestMigrationDCATAP extends HarvestMigration {
     $this->addFieldMapping('field_pod_theme', 'theme');
     $this->addFieldMapping('field_pod_theme:create_term')
       ->defaultValue(TRUE);
-
+    
     $this->addFieldMapping('field_related_content', 'references');
+    
+    // Use the publisher.name for author
+    $this->addFieldMapping('field_author', '_publisher');
     
     // dkan_dataset_metadata_source.
     if (module_exists('dkan_dataset_metadata_source')) {
@@ -85,6 +88,14 @@ class HarvestMigrationDCATAP extends HarvestMigration {
     
     if(isset($row->contactPoint->hasEmail)){
       $row->_mbox = $row->contactPoint->hasEmail;
+    }
+    
+    if(isset($row->contactPoint->fn) && $row->contactPoint->fn!='<Nobody>'){
+      $row->_mbox_name = $row->contactPoint->fn;
+    }
+    
+    if(isset($row->publisher->name) && $row->publisher->name != '') {
+      $row->_publisher = $row->publisher->name;
     }
   }
 
