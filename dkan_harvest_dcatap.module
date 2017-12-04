@@ -30,29 +30,65 @@ function dkan_harvest_dcatap_harvest_source_types() {
  */
 function _dkan_harvest_dcatap_cache(HarvestSource $source, $harvest_updatetime) {
 
-  // This is needed for remote uri.
-  $context = stream_context_create(
-            array(
-              'http' => array(
-                'timeout' => 600000,
-              ),
-              'https' => array(
-                'timeout' => 600000,
-              ),
-            )
-    );
+  try {
 
-  $remote = @file_get_contents($source->uri, 0, $context);
+    $remote = _dkan_harvest_dcatap_get_file($source->uri, 1200);
 
-  if ($remote) {
-    $data = drupal_json_decode($remote);
-
-    // Filter and save the data gathered from the endpoint.
-    if ($data) {
-      $v = _dkan_harvest_dcatap_cache_json($data, $source, $harvest_updatetime);
-      return $v;
+    if($remote === '') {
+      throw new Exception('Il file '.$source->uri.' ha restituito una stringa vuota');
     }
+    else if ($remote !== FALSE) {
+      $data = drupal_json_decode($remote);
+
+      // Filter and save the data gathered from the endpoint.
+      if ($data) {
+        $v = _dkan_harvest_dcatap_cache_json($data, $source, $harvest_updatetime);
+        return $v;
+      }
+      else {
+        $message = t('Harvest Cache JSON error n. @json_error (@json_message)',
+          array(
+            '@json_error' => json_last_error(),
+            '@json_message' => json_last_error_msg(),
+          ));
+        dkan_harvest_log($message, 'error');
+      }
+    }
+    else {
+      throw new Exception('Error reaching '. $source->uri. ', function returns "'.$remote.'"');
+    }
+  
+  } catch (Exception $e) {
+    // Handle exception
+    $message = t('Harvest Cache error in file_get_contents (@fileremote) : @msg ',
+        array(
+        '@fileremote' => $source->uri,
+        '@msg' => $e->getMessage(),
+      ));
+    dkan_harvest_log($message, 'error');
   }
+
+}
+
+/**
+ * Prende il contenuto del file remoto con un timeout personalizzabile.
+ * 
+ * @param string $url
+ * @param int @$timeout
+ * @return string
+*/
+function _dkan_harvest_dcatap_get_file($url, $timeout=600) {
+
+  $ch=curl_init();
+
+  curl_setopt($ch, CURLOPT_URL, $url);
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+  curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
+
+  $result=curl_exec($ch);
+  curl_close($ch);
+  return $result;
+
 }
 
 /**
